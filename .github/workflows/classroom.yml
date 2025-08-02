@@ -1,0 +1,237 @@
+name: GitHub Classroom Workflow
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  autograding:
+    name: Autograding
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Check student files exist
+      run: |
+        echo "Checking for required student files..."
+        if [ ! -f "snmp_agent.py" ]; then
+          echo "ERROR: snmp_agent.py not found!"
+          echo "::error file=snmp_agent.py::Required file snmp_agent.py is missing"
+          exit 1
+        fi
+        if [ ! -f "snmp_manager.py" ]; then
+          echo "ERROR: snmp_manager.py not found!"
+          echo "::error file=snmp_manager.py::Required file snmp_manager.py is missing"
+          exit 1
+        fi
+        echo "✓ All required files found"
+        
+    - name: Run syntax check
+      run: |
+        echo "Checking Python syntax..."
+        python -m py_compile snmp_agent.py
+        python -m py_compile snmp_manager.py
+        echo "✓ Syntax check passed"
+        
+    - name: Run specification grading tests
+      id: autograder
+      run: |
+        echo "Running specification grading tests..."
+        python run_tests.py > test_output.txt 2>&1 || true
+        cat test_output.txt
+        
+    - name: Parse specification grading results
+      if: always()
+      run: |
+        python - <<EOF
+        import re
+        import os
+        
+        # Read test output
+        with open('test_output.txt', 'r') as f:
+            output = f.read()
+        
+        # Parse grade level achieved
+        grade_match = re.search(r'Grade Level Achieved:\s+\x1b\[\d+m([A-C]|Not Passing)\x1b\[0m', output)
+        if not grade_match:
+            # Try without ANSI codes
+            grade_match = re.search(r'Grade Level Achieved:\s+([A-C]|Not Passing)', output)
+        
+        grade = grade_match.group(1) if grade_match else 'Not Passing'
+        
+        # Parse bundle results
+        c_complete = '✓' in output and 'C-Level (Basic Implementation)' in output
+        b_complete = '✓' in output and 'B-Level (Full GET/SET)' in output  
+        a_complete = '✓' in output and 'A-Level (Production Ready)' in output
+        
+        # Extract test counts from bundle lines
+        c_match = re.search(r'C-Level.*:\s+(\d+)/(\d+)\s+tests passed', output)
+        b_match = re.search(r'B-Level.*:\s+(\d+)/(\d+)\s+tests passed', output)
+        a_match = re.search(r'A-Level.*:\s+(\d+)/(\d+)\s+tests passed', output)
+        
+        c_passed = int(c_match.group(1)) if c_match else 0
+        c_total = int(c_match.group(2)) if c_match else 0
+        b_passed = int(b_match.group(1)) if b_match else 0
+        b_total = int(b_match.group(2)) if b_match else 0
+        a_passed = int(a_match.group(1)) if a_match else 0
+        a_total = int(a_match.group(2)) if a_match else 0
+        
+        # Calculate points for GitHub Classroom (optional compatibility)
+        # Map grades to points: A=100, B=85, C=70, Not Passing=0
+        grade_to_points = {'A': 100, 'B': 85, 'C': 70, 'Not Passing': 0}
+        points = grade_to_points.get(grade, 0)
+        
+        # Create GitHub Actions summary
+        summary = f"""# Specification Grading Results
+        
+        ## Grade Level Achieved: {grade}
+        
+        ### Bundle Completion Status
+        
+        | Bundle | Status | Tests Passed | Complete |
+        |--------|--------|--------------|----------|
+        | C-Level (Basic Implementation) | {'✅' if c_complete else '❌'} | {c_passed}/{c_total} | {'Yes' if c_complete else 'No'} |
+        | B-Level (Full GET/SET) | {'✅' if b_complete else '❌'} | {b_passed}/{b_total} | {'Yes' if b_complete else 'No'} |
+        | A-Level (Production Ready) | {'✅' if a_complete else '❌'} | {a_passed}/{a_total} | {'Yes' if a_complete else 'No'} |
+        
+        ### Requirements
+        - You must pass **ALL** tests in a bundle to receive credit
+        - Higher bundles require completion of all lower bundles
+        - No partial credit within bundles
+        
+        ### Next Steps
+        """
+        
+        if grade == 'Not Passing':
+            summary += "- Focus on completing all C-level tests first\\n"
+            summary += "- C-level covers basic GET operations and protocol structure\\n"
+        elif grade == 'C':
+            summary += "- Work on B-level tests (SET operations and error handling)\\n"
+            summary += "- You must complete ALL B-level tests to advance\\n"
+        elif grade == 'B':
+            summary += "- Complete A-level tests (buffering and edge cases)\\n"
+            summary += "- This demonstrates production-ready implementation\\n"
+        else:  # grade == 'A'
+            summary += "- 🎉 Congratulations! All bundles complete!\\n"
+            summary += "- Your implementation meets all specifications\\n"
+        
+        # Write to GitHub Actions summary
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(summary)
+        
+        # Set outputs for GitHub Classroom
+        print(f"::set-output name=points::{points}")
+        print(f"::set-output name=grade::{grade}")
+        
+        # Create JSON results for compatibility
+        import json
+        results = {
+            'grade': grade,
+            'points': points,
+            'bundles': {
+                'C': {'complete': c_complete, 'passed': c_passed, 'total': c_total},
+                'B': {'complete': b_complete, 'passed': b_passed, 'total': b_total},
+                'A': {'complete': a_complete, 'passed': a_passed, 'total': a_total}
+            }
+        }
+        
+        with open('autograder_results.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        # Fail if not passing (no C-level completion)
+        if grade == 'Not Passing':
+            print(f"::error::Grade '{grade}' - C-level bundle not complete")
+            exit(1)
+        EOF
+        
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          test_output.txt
+          autograder_results.json
+          
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read autograder results
+          let results;
+          try {
+            const data = fs.readFileSync('autograder_results.json', 'utf8');
+            results = JSON.parse(data);
+          } catch (e) {
+            results = { grade: 'Not Passing', bundles: {} };
+          }
+          
+          // Create comment
+          let comment = `## 🎯 Specification Grading Results\n\n`;
+          comment += `**Grade Level Achieved:** ${results.grade}\n\n`;
+          
+          if (results.bundles) {
+            comment += `### Bundle Status\n\n`;
+            comment += `| Bundle | Complete | Tests Passed |\n`;
+            comment += `|--------|----------|-------------|\n`;
+            
+            const bundleNames = {
+              'C': 'C-Level (Basic Implementation)',
+              'B': 'B-Level (Full GET/SET)',
+              'A': 'A-Level (Production Ready)'
+            };
+            
+            for (const [level, data] of Object.entries(results.bundles)) {
+              const icon = data.complete ? '✅' : '❌';
+              comment += `| ${bundleNames[level]} | ${icon} | ${data.passed}/${data.total} |\n`;
+            }
+            
+            comment += `\n### Requirements\n`;
+            comment += `- You must pass **ALL** tests in a bundle to receive credit\n`;
+            comment += `- Higher bundles require completion of all lower bundles\n`;
+            
+            comment += `\n### Next Steps\n`;
+            if (results.grade === 'Not Passing') {
+              comment += `- Focus on completing all C-level tests first\n`;
+            } else if (results.grade === 'C') {
+              comment += `- Work on B-level tests for SET operations\n`;
+            } else if (results.grade === 'B') {
+              comment += `- Complete A-level tests for production quality\n`;
+            } else {
+              comment += `- 🎉 Congratulations! All specifications met!\n`;
+            }
+          }
+          
+          // Post comment
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

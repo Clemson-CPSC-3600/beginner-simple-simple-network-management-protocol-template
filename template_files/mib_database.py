@@ -80,8 +80,8 @@ MIB_DATABASE = {
     '1.3.6.1.2.1.2.2.1.18.3': ('STRING', 'Loopback Interface'),
     
     # IP Group (1.3.6.1.2.1.4) - Basic IP statistics
-    '1.3.6.1.2.1.4.1.0': ('INTEGER', 1),  # ipForwarding (1 = forwarding) - WRITABLE
-    '1.3.6.1.2.1.4.2.0': ('INTEGER', 64),  # ipDefaultTTL - WRITABLE
+    '1.3.6.1.2.1.4.1.0': ('INTEGER', 1),  # ipForwarding (1 = forwarding)
+    '1.3.6.1.2.1.4.2.0': ('INTEGER', 64),  # ipDefaultTTL
     '1.3.6.1.2.1.4.3.0': ('COUNTER', 98765432),  # ipInReceives
     '1.3.6.1.2.1.4.4.0': ('COUNTER', 1234),  # ipInHdrErrors
     '1.3.6.1.2.1.4.5.0': ('COUNTER', 456),  # ipInAddrErrors
@@ -116,19 +116,9 @@ MIB_DATABASE = {
     '1.3.6.1.2.1.11.4.0': ('COUNTER', 2),  # snmpInBadCommunityNames
     '1.3.6.1.2.1.11.5.0': ('COUNTER', 1),  # snmpInBadCommunityUses
     '1.3.6.1.2.1.11.6.0': ('COUNTER', 0),  # snmpInASNParseErrs
-    
-    # Custom Configuration OIDs (1.3.6.1.4.1.200) - For testing SET operations
-    '1.3.6.1.4.1.200.1.1.0': ('INTEGER', 100),  # configMaxConnections - WRITABLE
-    '1.3.6.1.4.1.200.1.2.0': ('INTEGER', 30),   # configTimeout - WRITABLE
-    '1.3.6.1.4.1.200.1.3.0': ('INTEGER', 5),    # configRetryCount - WRITABLE
-    '1.3.6.1.4.1.200.1.4.0': ('COUNTER', 0),    # configResetCounter - WRITABLE
-    '1.3.6.1.4.1.200.1.5.0': ('TIMETICKS', 0),  # configLastResetTime - WRITABLE
-    '1.3.6.1.4.1.200.1.6.0': ('STRING', 'default'),  # configProfile - WRITABLE
-    '1.3.6.1.4.1.200.1.7.0': ('INTEGER', 1),    # configDebugLevel - WRITABLE
-    '1.3.6.1.4.1.200.1.8.0': ('STRING', 'production'),  # configMode - WRITABLE
 }
 
-# Add some extra OIDs to ensure we have enough for testing
+# Add some extra OIDs to ensure we have enough for bulk testing
 for i in range(1, 51):
     MIB_DATABASE[f'1.3.6.1.4.1.99.1.{i}.0'] = ('STRING', f'Test OID {i} - This is a longer string to help test buffering of large SNMP messages')
 
@@ -147,20 +137,6 @@ MIB_PERMISSIONS = {
     '1.3.6.1.2.1.2.2.1.18.1': 'read-write',
     '1.3.6.1.2.1.2.2.1.18.2': 'read-write',
     '1.3.6.1.2.1.2.2.1.18.3': 'read-write',
-    
-    # IP configuration parameters are writable
-    '1.3.6.1.2.1.4.1.0': 'read-write',  # ipForwarding
-    '1.3.6.1.2.1.4.2.0': 'read-write',  # ipDefaultTTL
-    
-    # Custom configuration OIDs are all writable
-    '1.3.6.1.4.1.200.1.1.0': 'read-write',  # configMaxConnections
-    '1.3.6.1.4.1.200.1.2.0': 'read-write',  # configTimeout
-    '1.3.6.1.4.1.200.1.3.0': 'read-write',  # configRetryCount
-    '1.3.6.1.4.1.200.1.4.0': 'read-write',  # configResetCounter
-    '1.3.6.1.4.1.200.1.5.0': 'read-write',  # configLastResetTime
-    '1.3.6.1.4.1.200.1.6.0': 'read-write',  # configProfile
-    '1.3.6.1.4.1.200.1.7.0': 'read-write',  # configDebugLevel
-    '1.3.6.1.4.1.200.1.8.0': 'read-write',  # configMode
 }
 
 # All other OIDs default to read-only
