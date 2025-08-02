@@ -1,0 +1,12 @@
+Hex dump of get_response_error.bin
+Size: 11 bytes
+======================================================================
+
+00000000  00 00 00 0b 00 00 03 eb a1 01 00                  |...........|
+
+Protocol Analysis:
+----------------------------------------
+Total Size: 11 bytes
+Request ID: 1003
+PDU Type: 0xa1 (GET_RESPONSE)
+Error Code: 1 (NO_SUCH_OID)

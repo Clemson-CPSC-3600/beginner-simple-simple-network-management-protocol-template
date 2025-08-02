@@ -1,0 +1,49 @@
+SNMP Manager Expected Outputs
+================================================================================
+
+Example 1:
+----------------------------------------
+Command: python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0
+Output:
+1.3.6.1.2.1.1.1.0 = Router Model X2000 - High Performance Edge Router
+
+Example 2:
+----------------------------------------
+Command: python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0 1.3.6.1.2.1.1.3.0 1.3.6.1.2.1.1.5.0
+Output:
+1.3.6.1.2.1.1.1.0 = Router Model X2000 - High Performance Edge Router
+1.3.6.1.2.1.1.3.0 = 452300 (1 hours, 15 minutes, 23.00 seconds)
+1.3.6.1.2.1.1.5.0 = router-main
+
+Example 3:
+----------------------------------------
+Command: python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.99.0
+Output:
+Error: No such OID exists
+
+Example 4:
+----------------------------------------
+Command: python snmp_manager.py set localhost:1161 1.3.6.1.2.1.1.5.0 string "new-router-name"
+Output:
+Set operation successful:
+1.3.6.1.2.1.1.5.0 = new-router-name
+
+Example 5:
+----------------------------------------
+Command: python snmp_manager.py set localhost:1161 1.3.6.1.2.1.1.3.0 integer 0
+Output:
+Error: OID is read-only
+
+Example 6:
+----------------------------------------
+Command: python snmp_manager.py bulk localhost:1161 1.3.6.1.2.1.2.2.1.10 5
+Output:
+Requesting up to 5 OIDs starting after 1.3.6.1.2.1.2.2.1.10...
+Received 5 OIDs in 0.012 seconds (156 bytes)
+------------------------------------------------------------
+1.3.6.1.2.1.2.2.1.10.1 = 3,456,789,012
+1.3.6.1.2.1.2.2.1.10.2 = 1,876,543,210
+1.3.6.1.2.1.2.2.1.10.3 = 567,890
+1.3.6.1.2.1.2.2.1.11.1 = 23,456,789
+1.3.6.1.2.1.2.2.1.11.2 = 8,765,432
+

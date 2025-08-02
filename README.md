@@ -26,6 +26,13 @@ This project will give you hands-on experience with the same fundamental concept
 
 # 2. Prerequisites and Getting Started
 
+## Quick Start Guides
+📚 **New to the project?** Start here:
+- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Step-by-step setup guide with your first implementation
+- **[DEBUGGING.md](DEBUGGING.md)** - Common errors, debugging techniques, and troubleshooting tips
+- **[GRADING.md](GRADING.md)** - Specification grading bundles and requirements
+- **[TESTING.md](TESTING.md)** - How to run tests and understand results
+
 ## Required Knowledge
 * Basic Python programming (loops, functions, dictionaries)
 * Understanding of TCP sockets (`socket`, `bind`, `listen`, `accept`, `connect`, `send`, `recv`)
