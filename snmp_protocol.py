@@ -23,9 +23,7 @@ OID_COUNT_LENGTH = 1  # Length of OID count field in bytes
 OID_LENGTH_FIELD = 1  # Length of OID length field in bytes
 VALUE_TYPE_LENGTH = 1  # Length of value type field in bytes
 VALUE_LENGTH_FIELD = 2  # Length of value length field in bytes
-MAX_REPETITIONS_LENGTH = 2  # Length of max repetitions field in bytes
 OID_COUNT_MAX = 255  # Maximum OIDs in a single request
-MAX_REPETITIONS_MAX = 65535  # Maximum repetitions for bulk request
 PDU_TYPE_OFFSET = 8  # Offset where PDU type is located in message
 REQUEST_ID_OFFSET = 4  # Offset where request ID starts in message
 
@@ -37,7 +35,6 @@ class PDUType(IntEnum):
     GET_REQUEST = 0xA0
     GET_RESPONSE = 0xA1
     SET_REQUEST = 0xA3
-    GET_BULK_REQUEST = 0xA5
 
 # Value Types
 class ValueType(IntEnum):
@@ -229,39 +226,6 @@ class SetRequest(SNMPMessage):
         # TODO: Implement SetRequest unpacking
         raise NotImplementedError("Implement SetRequest.unpack()")
 
-class GetBulkRequest(SNMPMessage):
-    """SNMP GetBulkRequest message"""
-    
-    def __init__(self, request_id: int, oid: str, max_repetitions: int):
-        super().__init__(request_id, PDUType.GET_BULK_REQUEST)
-        self.oid = oid
-        self.max_repetitions = max_repetitions
-    
-    def pack(self) -> bytes:
-        """
-        TODO: Pack this GetBulkRequest into bytes
-        
-        Format (see README section 3.3.4):
-        - Standard header
-        - Payload:
-            - oid_length (1 byte)
-            - oid_bytes (variable)
-            - max_repetitions (2 bytes, big-endian)
-        
-        Test: test_bulk_request_encoding will verify this
-        """
-        # TODO: Implement GetBulkRequest packing
-        raise NotImplementedError("Implement GetBulkRequest.pack()")
-    
-    @classmethod
-    def unpack(cls, data: bytes) -> 'GetBulkRequest':
-        """
-        TODO: Create GetBulkRequest from received bytes
-        
-        Test: test_bulk_request_decoding will verify this
-        """
-        # TODO: Implement GetBulkRequest unpacking
-        raise NotImplementedError("Implement GetBulkRequest.unpack()")
 
 class GetResponse(SNMPMessage):
     """SNMP GetResponse message"""
@@ -315,8 +279,6 @@ def unpack_message(data: bytes) -> SNMPMessage:
         return GetRequest.unpack(data)
     elif pdu_type == PDUType.SET_REQUEST:
         return SetRequest.unpack(data)
-    elif pdu_type == PDUType.GET_BULK_REQUEST:
-        return GetBulkRequest.unpack(data)
     elif pdu_type == PDUType.GET_RESPONSE:
         return GetResponse.unpack(data)
     else:
@@ -366,7 +328,7 @@ def receive_complete_message(sock) -> bytes:
             ...
     
     Test: test_message_buffering will verify this handles partial receives
-    Test: test_large_bulk_response will verify this handles large messages
+    Test: test_large_response will verify this handles large messages
     """
     # TODO: Implement complete message buffering
     raise NotImplementedError("Implement receive_complete_message")

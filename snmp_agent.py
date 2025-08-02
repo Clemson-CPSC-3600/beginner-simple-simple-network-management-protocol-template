@@ -23,7 +23,7 @@ from typing import Dict, Any, List, Tuple, Optional
 # Import protocol components (you'll implement these in snmp_protocol.py)
 from snmp_protocol import (
     PDUType, ValueType, ErrorCode,
-    GetRequest, SetRequest, GetBulkRequest, GetResponse,
+    GetRequest, SetRequest, GetResponse,
     unpack_message, receive_complete_message,
     encode_oid, decode_oid
 )
@@ -231,30 +231,6 @@ class SNMPAgent:
         
         raise NotImplementedError("Implement _handle_set_request")
     
-    def _handle_get_bulk_request(self, request: GetBulkRequest) -> GetResponse:
-        """
-        TODO: Process GetBulkRequest and return GetResponse
-        
-        Starting from the given OID, return up to max_repetitions OIDs
-        in lexicographic order.
-        
-        Algorithm:
-        1. Get all OIDs from self.mib
-        2. Sort them lexicographically
-        3. Find OIDs that come after the requested OID
-        4. Return up to max_repetitions of them
-        
-        Hint: Use _get_next_oids helper method
-        
-        Test: test_bulk_request
-        """
-        # TODO: Update dynamic values
-        self._update_dynamic_values()
-        
-        # TODO: Get next OIDs
-        # TODO: Build response with values
-        
-        raise NotImplementedError("Implement _handle_get_bulk_request")
     
     # ========================================================================
     # STUDENT IMPLEMENTATION: Helper methods
@@ -305,8 +281,6 @@ class SNMPAgent:
         4. Return up to max_count of them
         
         Hint: Implement _compare_oids to help with sorting
-        
-        Test: test_bulk_request_ordering
         """
         # TODO: Get and sort OIDs
         # TODO: Find OIDs after start_oid

@@ -22,7 +22,7 @@ from typing import List, Tuple, Optional, Any
 # Import protocol components (you'll implement these in snmp_protocol.py)
 from snmp_protocol import (
     PDUType, ValueType, ErrorCode,
-    GetRequest, SetRequest, GetBulkRequest, GetResponse,
+    GetRequest, SetRequest, GetResponse,
     receive_complete_message, unpack_message
 )
 
@@ -192,31 +192,6 @@ class SNMPManager:
         
         raise NotImplementedError("Implement set operation")
     
-    def bulk(self, host: str, port: int, start_oid: str, max_repetitions: int) -> None:
-        """
-        TODO: Send GetBulkRequest and display response
-        
-        GetBulk is used to efficiently retrieve many OIDs at once.
-        It returns up to max_repetitions OIDs starting after start_oid.
-        
-        Steps similar to get(), but:
-        - Create GetBulkRequest instead of GetRequest
-        - May receive a large response (buffering is critical!)
-        - Display all returned OIDs
-        
-        Display format:
-        - Header: "Requesting up to X OIDs starting after Y..."
-        - After receive: "Received N OIDs in T seconds (B bytes)"
-        - Separator line: "-" * 60
-        - Then each OID: "oid = value"
-        
-        Measure elapsed time for the receive operation to show
-        buffering performance.
-        
-        Test: test_manager_bulk_request
-        """
-        # TODO: Implement bulk operation
-        raise NotImplementedError("Implement bulk operation")
     
     # ========================================================================
     # STUDENT IMPLEMENTATION: Helper methods
@@ -248,13 +223,11 @@ def print_usage():
     print("Usage:")
     print("  snmp_manager.py get <host:port> <oid> [<oid> ...]")
     print("  snmp_manager.py set <host:port> <oid> <type> <value>")
-    print("  snmp_manager.py bulk <host:port> <start_oid> <max_repetitions>")
     print()
     print("Examples:")
     print("  snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0")
     print("  snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0 1.3.6.1.2.1.1.5.0")
     print("  snmp_manager.py set localhost:1161 1.3.6.1.2.1.1.5.0 string 'new-router-name'")
-    print("  snmp_manager.py bulk localhost:1161 1.3.6.1.2.1.2.2.1 50")
     print()
     print("Types: integer, string, counter, timeticks")
 
@@ -315,23 +288,6 @@ def main():
         value_type = sys.argv[4]
         value = sys.argv[5]
         manager.set(host, port, oid, value_type, value)
-        
-    elif command == 'bulk':
-        if len(sys.argv) != 5:
-            print("Error: Bulk requires exactly 3 arguments: host:port start_oid max_repetitions")
-            print_usage()
-            sys.exit(1)
-        
-        start_oid = sys.argv[3]
-        try:
-            max_repetitions = int(sys.argv[4])
-            if max_repetitions < 1:
-                raise ValueError("max_repetitions must be at least 1")
-        except ValueError as e:
-            print(f"Error: Invalid max_repetitions - {e}")
-            sys.exit(1)
-        
-        manager.bulk(host, port, start_oid, max_repetitions)
         
     else:
         print(f"Error: Unknown command '{command}'")

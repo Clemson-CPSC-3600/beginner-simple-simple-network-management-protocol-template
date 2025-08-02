@@ -1,0 +1,15 @@
+# Minimal Requirements for SNMP Protocol Implementation
+# CPSC 3600 - Networks and Network Programming
+#
+# This file contains only the essential packages needed to run the tests.
+# Use this if you have issues with the full requirements.txt
+
+# Core testing framework (required)
+pytest>=7.0.0
+pytest-timeout>=2.1.0
+
+# For better test output (highly recommended)
+colorama>=0.4.4
+
+# For test reporting (required for autograder)
+pytest-json-report>=1.5.0

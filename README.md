@@ -3,10 +3,75 @@
 **Fall 2025**
 
 ---
-# 1. Introduction
-In this project, you will implement a simplified version of the Simple Network Management Protocol (SNMP), the industry-standard protocol used to monitor and manage network devices worldwide. Every router, switch, server, and network-enabled printer uses SNMP for monitoring and configuration. Your implementation will allow network administrators to 1) query device information (uptime, system name, traffic statistics, etc), 2) modify device configurations, 3) and efficiently retrieve bulk data from network interfaces.
 
-There is a lot of information in this document that you need to understand how this protocol works, however it maps to a fairly small amount of code that you will need to right. The bulk of the detail discussed in this document is in the *data* (which we provide you with), not the *code* required to access it.
+## 📑 Table of Contents
+
+### Quick References
+- [📊 Grading Information](GRADING.md) - Specification grading and bundles
+- [🧪 Testing Guide](TESTING.md) - How to run and understand tests
+
+### Main Documentation
+1. [**Introduction**](#1-introduction)
+   - [Learning Objectives](#learning-objectives)
+   - [Why This Matters](#why-this-matters)
+
+2. [**Getting Started**](#2-getting-started)
+   - [Environment Setup](#environment-setup)
+   - [Project Overview](#project-overview)
+   - [Your First Implementation: OID Encoding](#your-first-implementation-oid-encoding)
+   - [Testing Your First Feature](#testing-your-first-feature)
+
+3. [**Prerequisites and Project Structure**](#3-prerequisites-and-project-structure)
+   - [Required Knowledge](#required-knowledge)
+   - [Project File Structure](#project-file-structure)
+
+4. [**SNMP Protocol**](#4-snmp-protocol)
+   - [What is SNMP?](#what-is-snmp)
+   - [Building Intuition: An Analogy](#building-intuition-an-analogy)
+   - [SNMP Protocol Specification](#snmp-protocol-specification)
+     - [Object Identifiers (OID)](#object-identifiers-oid)
+     - [SNMP Message Structure](#snmp-message-structure)
+     - [SNMP Payload Formats](#snmp-payload-formats)
+     - [Value Types](#value-types)
+   - [Examples](#examples)
+
+5. [**Handling Large Messages with Buffering**](#5-handling-large-messages-with-buffering)
+   - [The Buffering Problem](#the-buffering-problem)
+   - [Testing Your Buffering Implementation](#testing-your-buffering-implementation)
+
+6. [**Implementation Requirements**](#6-implementation-requirements)
+   - [Part 1: SNMP Agent](#part-1-snmp-agent-snmp_agentpy)
+   - [Part 2: SNMP Manager](#part-2-snmp-manager-snmp_managerpy)
+
+7. [**Project Milestones**](#7-project-milestones)
+   - [Milestone 1: Basic Get Operations](#milestone-1-basic-get-operations-week-1)
+   - [Milestone 2: Multiple OIDs & Error Handling](#milestone-2-multiple-oids--error-handling-week-2)
+   - [Milestone 3: Set Operations & State Management](#milestone-3-set-operations--state-management-week-3)
+
+8. [**Testing Your Implementation**](#8-testing-your-implementation)
+   - [Running the Test Suite](#running-the-test-suite)
+   - [Manual Testing](#manual-testing)
+
+9. [**Debugging Guide**](#9-debugging-guide)
+   - [Essential Debugging Tools](#essential-debugging-tools)
+   - [Common Errors and Solutions](#common-errors-and-solutions)
+   - [Understanding Error Messages](#understanding-error-messages)
+   - [Protocol Debugging Techniques](#protocol-debugging-techniques)
+   - [Socket Programming Issues](#socket-programming-issues)
+
+10. [**Grading and Submission**](#10-grading-and-submission)
+    - [Grading Rubric](#grading-rubric)
+    - [Submission Requirements](#submission-requirements)
+
+11. [**Additional Resources**](#11-additional-resources)
+
+---
+
+# 1. Introduction
+
+In this project, you will implement a simplified version of the Simple Network Management Protocol (SNMP), the industry-standard protocol used to monitor and manage network devices worldwide. Every router, switch, server, and network-enabled printer uses SNMP for monitoring and configuration. Your implementation will allow network administrators to 1) query device information (uptime, system name, traffic statistics, etc), 2) modify device configurations, 3) and handle multiple OID requests efficiently.
+
+There is a lot of information in this document that you need to understand how this protocol works, however it maps to a fairly small amount of code that you will need to write. The bulk of the detail discussed in this document is in the *data* (which we provide you with), not the *code* required to access it.
 
 ## Learning Objectives
 By building this protocol from scratch, you will master essential network programming skills including:
@@ -24,14 +89,189 @@ This project will give you hands-on experience with the same fundamental concept
 * **Real Protocol:** You're building a subset of an actual IETF standard
 * **Practical Application:** The same concepts apply to REST APIs, gRPC, and other network protocols
 
-# 2. Prerequisites and Getting Started
+---
 
-## Quick Start Guides
-📚 **New to the project?** Start here:
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Step-by-step setup guide with your first implementation
-- **[DEBUGGING.md](DEBUGGING.md)** - Common errors, debugging techniques, and troubleshooting tips
-- **[GRADING.md](GRADING.md)** - Specification grading bundles and requirements
-- **[TESTING.md](TESTING.md)** - How to run tests and understand results
+# 2. Getting Started
+
+## Environment Setup
+
+### Prerequisites
+Ensure you have Python 3.8 or higher installed:
+```bash
+python --version
+# Should show Python 3.8.x or higher
+
+# Note: If the above doesn't work, try:
+python3 --version
+```
+
+### Install Required Packages
+Install all required packages using the provided requirements.txt file:
+```bash
+# Install all requirements at once
+pip install -r requirements.txt
+
+# Note: If pip doesn't work, try:
+pip3 install -r requirements.txt
+
+# Alternative: If you encounter issues, use the minimal requirements:
+pip install -r requirements-minimal.txt
+```
+
+This will install:
+- `pytest` - Testing framework (required)
+- `pytest-timeout` - Timeout handling for tests (required)
+- `colorama` - Colored output for better readability (recommended)
+- `pytest-json-report` - Test reporting for autograder (required)
+
+**Troubleshooting Installation:**
+- If you get permission errors, add `--user`: `pip install --user -r requirements.txt`
+- On Mac/Linux, you might need `sudo`: `sudo pip install -r requirements.txt`
+- In a virtual environment (recommended): 
+  ```bash
+  python -m venv venv
+  source venv/bin/activate  # On Windows: venv\Scripts\activate
+  pip install -r requirements.txt
+  ```
+
+### Verify Your Setup
+```bash
+# Check that all required files are present
+ls *.py
+# Should show: snmp_protocol.py, snmp_agent.py, snmp_manager.py, mib_database.py
+
+# Verify pytest is installed correctly
+python -m pytest --version
+
+# Try running a simple test (it will fail initially - that's expected!)
+python -m pytest tests/ -v -k "test_oid_encoding" 
+```
+
+## Project Overview
+
+You'll be implementing three main files:
+
+```
+snmp_protocol.py   ← Start here! (Protocol encoding/decoding)
+    ↓
+snmp_agent.py      ← Then this (Server implementation)
+    ↓
+snmp_manager.py    ← Finally this (Client implementation)
+```
+
+**DO NOT MODIFY**: `mib_database.py` (this contains the data your agent will serve)
+
+## Your First Implementation: OID Encoding
+
+Let's start with the simplest feature: converting OID strings to bytes. This will give you a quick win and help you understand the project structure.
+
+### Step 1: Open `snmp_protocol.py`
+
+Find the `encode_oid` function around line 56:
+
+```python
+def encode_oid(oid_string: str) -> bytes:
+    """
+    TODO: Convert OID string to bytes
+    
+    Example: "1.3.6.1.2.1.1.5.0" → b'\x01\x03\x06\x01\x02\x01\x01\x05\x00'
+    ...
+    """
+    # TODO: Implement OID encoding
+    raise NotImplementedError("Implement encode_oid")
+```
+
+### Step 2: Understand What OIDs Are
+
+An OID (Object Identifier) is like a path in a tree:
+- "1.3.6.1.2.1.1.5.0" means: Start at root, go to child 1, then child 3, then 6, etc.
+- Each number becomes one byte in our simplified protocol
+- Real SNMP uses more complex encoding, but we're keeping it simple!
+
+### Step 3: Implement the Function
+
+Replace the `raise NotImplementedError` with this implementation:
+
+```python
+def encode_oid(oid_string: str) -> bytes:
+    """
+    Convert OID string to bytes
+    
+    Example: "1.3.6.1.2.1.1.5.0" → b'\x01\x03\x06\x01\x02\x01\x01\x05\x00'
+    """
+    # Split the string by '.' to get individual numbers
+    # "1.3.6.1.2.1.1.5.0" → ["1", "3", "6", "1", "2", "1", "1", "5", "0"]
+    parts = oid_string.split('.')
+    
+    # Convert each string number to an integer
+    # ["1", "3", "6", ...] → [1, 3, 6, ...]
+    numbers = [int(part) for part in parts]
+    
+    # Convert the list of integers to bytes
+    # [1, 3, 6, ...] → b'\x01\x03\x06...'
+    return bytes(numbers)
+```
+
+### Step 4: Implement the Decode Function
+
+Now implement `decode_oid` (around line 75):
+
+```python
+def decode_oid(oid_bytes: bytes) -> str:
+    """
+    Convert OID bytes back to string
+    
+    Example: b'\x01\x03\x06\x01\x02\x01\x01\x05\x00' → "1.3.6.1.2.1.1.5.0"
+    """
+    # Convert each byte to its integer value and join with '.'
+    return '.'.join(str(byte) for byte in oid_bytes)
+```
+
+## Testing Your First Feature
+
+### Run the OID Tests
+```bash
+# Run just the OID encoding tests
+python -m pytest tests/ -v -k "test_oid"
+
+# You should see something like:
+# tests/test_protocol_structure.py::test_oid_encoding PASSED
+# tests/test_protocol_structure.py::test_oid_decoding PASSED
+```
+
+### Understanding Test Output
+
+✅ **PASSED** - Your implementation is correct!  
+❌ **FAILED** - Check the error message for details  
+⚠️ **SKIPPED** - Test was skipped (usually due to dependencies)
+
+### Verify with Interactive Python
+
+```python
+# Start Python interactive mode
+python
+
+# Note: If 'python' doesn't work, use 'python3'
+
+>>> from snmp_protocol import encode_oid, decode_oid
+>>> 
+>>> # Test encoding
+>>> oid_bytes = encode_oid("1.3.6.1.2.1.1.5.0")
+>>> print(oid_bytes.hex())  # Should show: 010306010201010500
+>>> 
+>>> # Test decoding
+>>> result = decode_oid(oid_bytes)
+>>> print(result)  # Should show: 1.3.6.1.2.1.1.5.0
+>>> 
+>>> # Test round-trip
+>>> original = "1.3.6.1.2.1.1.1.0"
+>>> assert decode_oid(encode_oid(original)) == original
+>>> print("Round-trip test passed!")
+```
+
+---
+
+# 3. Prerequisites and Project Structure
 
 ## Required Knowledge
 * Basic Python programming (loops, functions, dictionaries)
@@ -40,9 +280,11 @@ This project will give you hands-on experience with the same fundamental concept
 
 ## Project File Structure
 
-The project template contains several files and folders. You are responsible for implementing two main files: `snmp_agent.py` and `snmp_manager.py`. A brief explanation of each file is provided below:
+The project template contains several files and folders. You are responsible for implementing three main files: `snmp_protocol.py`, `snmp_agent.py` and `snmp_manager.py`. A brief explanation of each file is provided below:
 
 ### Files You Will Implement
+
+- **snmp_protocol.py** - Contains message classes and encoding/decoding logic for simplified SNMP. Start here!
 
 - **snmp_agent.py** - The SNMP server that simulates a network device. This program listens for SNMP requests, maintains device state (MIB database), and responds with appropriate data from its Management Information Base (MIB).
 
@@ -52,15 +294,13 @@ The project template contains several files and folders. You are responsible for
 
 - **mib_database.py** - Contains the MIB structure that defines what data your SNMP agent can serve. This includes system information, interface statistics, and configuration parameters. The MIB is provided as a Python dictionary with OIDs as keys. Do not modify this file.
 
-- **snmp_types.py** - Helper functions for encoding and decoding SNMP data types. Includes utilities for OID manipulation and value type conversion. You should use these functions but not modify them.
-
-- **test_suite.py** - Automated tests that verify your implementation against the protocol specification. Run this to check your progress on each milestone.
-
-- **packet_captures/** - Directory containing real SNMP packet captures that you can examine with Wireshark to understand the protocol better.
+- **packet_captures/** - Directory containing real SNMP packet captures that you can examine to understand the protocol better.
 
 - **examples/** - Sample command outputs showing expected behavior for various SNMP operations.
 
-# 3. SNMP Protocol
+---
+
+# 4. SNMP Protocol
 
 ## What is SNMP? 
 The Simple Network Management Protocol (SNMP) is one of the most widely deployed protocols on the Internet, yet it often operates invisibly in the background. First standardized in 1988, SNMP provides a universal language for monitoring and managing network devices. When network administrators need to check if a router is overheating, monitor bandwidth usage on a switch, or update configuration settings on hundreds of devices simultaneously, they rely on SNMP. The protocol works by organizing device information into a structured hierarchy called a Management Information Base (MIB), where each piece of data—from CPU temperature to packet counts—has a unique address called an Object Identifier (OID).
@@ -77,9 +317,7 @@ To help understand how the SNMP protocols works, let's imagine how the SNMP prot
   * "How many lattes [OID #3.1.7] sold today?"
 * **Set Request** = Regional manager instructs the barista to change something 
   * "Set the WiFi password [OID #2.4.13] to 'brew2025'"
-* **Get Bulk** = Regional manager asking for information about many things at once 
-  * "Tell me all stats for items #3.1 through #3.50"
-* **Get Response** = Barista's response to the regional manager's individual requests, bulk requests, or instructions 
+* **Get Response** = Barista's response to the regional manager's individual requests or instructions 
   * "42 lattes [OID #3.1.7] sold"
   * "3.1 stats are..., 3.2 stats are..., 3.3 stats are ..., ..."
   * "Password [OID #2.4.13] changed successfully")
@@ -183,7 +421,7 @@ Every SNMP message follows this pattern. Note how there is a fixed 9 byte header
 **Field Descriptions:**
 - `total_size` (4 bytes, big-endian unsigned int): Total message size including this field and all other header fields
 - `request_id` (4 bytes, big-endian unsigned int): Unique identifier for matching responses to requests (like a ticket number)
-- `pdu_type` (1 byte): The kind of message (GET_REQUEST=0xA0, GET_RESPONSE=0xA1, SET_REQUEST=0xA3, GET_BULK_REQUEST=0xA5)
+- `pdu_type` (1 byte): The kind of message (GET_REQUEST=0xA0, GET_RESPONSE=0xA1, SET_REQUEST=0xA3)
 - `error_code` (1 byte, only in responses): 0=success, 1=no such Object Identifier (OID), 2=bad value, 3=read-only
 - `payload`: PDU-specific data (see SNMP Payload Formats below)
 
@@ -251,7 +489,7 @@ SetRequest Payload
 ```
 
 #### 3. GetResponse Payload
-The payload of the GetResponse message contains responses to GetResponse, GetBulk, or SetResponse messages. Each OID included in the original message is "bound" to a response value in this message. Again, as we've seen before, these messages are variable length due to their ability to contain responses for each OID in the original request and must start with the number of OIDs and their responses included in this message (up to 255).
+The payload of the GetResponse message contains responses to GetRequest or SetRequest messages. Each OID included in the original message is "bound" to a response value in this message. Again, as we've seen before, these messages are variable length due to their ability to contain responses for each OID in the original request and must start with the number of OIDs and their responses included in this message (up to 255).
 
 ```
 ┌────────────────┬────────────┬────────────┬     ┬────────────┐
@@ -277,46 +515,6 @@ GetResponse Payload
 00 10                 # value_length = 16
 52 6F 75 74 65 72 20 4D 6F 64 65 6C 20 58 32 30 30 30  # "Router Model X2000"
 ```
-
-#### 4. GetBulkRequest Payload
-The payload of the GetBulkRequest message contains a single starting OID and the maximum number of sequential OIDs to return. Unlike GetRequest which requires explicitly listing each desired OID, GetBulkRequest enables efficient retrieval of multiple sequential OIDs by performing a walk through the MIB tree in lexicographic order (up to 65,635).
-
-```
-┌─────────────┬────────────┬───────────────────┐
-│ oid_length  │ oid_bytes  │ max_repetitions   │
-│ (1 byte)    │ (variable) │ (2 bytes)         │
-└─────────────┴────────────┴───────────────────┘
-```
-
-The GetBulkRequest is particularly useful when you need to retrieve all entries in a table (like interface statistics) without knowing how many entries exist. The agent will return up to max_repetitions OIDs starting from the specified OID, following the lexicographic ordering of the MIB tree and potentially crossing into different branches and tables. This also means that GetBulkRequests can return a very large amount of data, which makes buffering the data at the receiver is crucial (see *Handling Large Messages with Buffering* below)
-
-**Lexicographic Ordering Example:**
-Starting from 1.3.6.1.2.1.2.2.1.10, the sequence would be:
-
-```
-1.3.6.1.2.1.2.2.1.10.1 (interface 1 bytes in)
-1.3.6.1.2.1.2.2.1.10.2 (interface 2 bytes in)
-1.3.6.1.2.1.2.2.1.10.3 (interface 3 bytes in)
-1.3.6.1.2.1.2.2.1.11.1 (moves to next table - interface 1 unicast packets)
-1.3.6.1.2.1.2.2.1.11.2 (interface 2 unicast packets)
-... and so on through the MIB tree
-```
-
-**Example - Get 50 OIDs starting from interfaces**
-```
-GetBulkRequest Payload
-↓
-0A                             # OID length = 10
-01 03 06 01 02 01 02 02 01 10  # OID: 1.3.6.1.2.1.2.2.1.10 (interface in octets)
-00 32                          # max_repetitions = 50
-```
-This request would return up to 50 OIDs starting from the first OID after 1.3.6.1.2.1.2.2.1.10. If there are only 3 interfaces, it would return:
-
-* All interface input byte counters (1.3.6.1.2.1.2.2.1.10.1 through .10.3)
-* Continue to interface unicast packets (1.3.6.1.2.1.2.2.1.11.1 through .11.3)
-* Continue to interface output bytes (1.3.6.1.2.1.2.2.1.16.1 through .16.3)
-  * 1.3.6.1.2.1.2.2.1.12 through 1.3.6.1.2.1.2.2.1.15 don't exist on this device, so they are skipped
-* And keep walking through subsequent OIDs until 50 are returned
 
 
 
@@ -435,14 +633,15 @@ A1                       # Type: GetResponse (0xA1)
 57 41 4E 20 4C 69 6E 6B 31  # Confirmed: "WAN Link1"
 ```
 
+---
 
-# 4. Handling Large Messages with Buffering
-
-One of the key challenges in network programming is handling messages that are too large to be received in a single `recv()` call. The socket's receive buffer has a limited size, and the operating system may deliver data in chunks smaller than the complete message.
+# 5. Handling Large Messages with Buffering
 
 ## The Buffering Problem
 
-Consider a GetBulk response containing information for 50 network interfaces. This response might be 5KB or larger. When you call `sock.recv(4096)`, you might only receive the first 1KB of data. Your recv() calls might return data like this:
+One of the key challenges in network programming is handling messages that are too large to be received in a single `recv()` call. The socket's receive buffer has a limited size, and the operating system may deliver data in chunks smaller than the complete message.
+
+Consider a GetResponse containing information for multiple OIDs with large string values. This response might exceed the socket buffer size. When you call `sock.recv(4096)`, you might only receive part of the data. Your recv() calls might return data like this:
 
 ```
 recv(4096) → 1460 bytes (partial message!)
@@ -484,11 +683,13 @@ else
 ## Testing Your Buffering Implementation
 
 The test suite includes specific tests for buffering:
-- Sending GetBulk requests that generate >4KB responses
+- Sending requests with multiple OIDs that generate large responses
 - Verifying correct reassembly of fragmented messages
 - Stress testing with repeated large requests
 
-# 5. Implementation Requirements
+---
+
+# 6. Implementation Requirements
 
 ### Part 1: SNMP Agent (snmp_agent.py)
 
@@ -498,10 +699,9 @@ Your SNMP agent must:
 
 2. **Handle sequential client connections** - The server should continue running and accept new connections after clients disconnect. You do NOT need to serve multiple clients simultaneously (we'll tackle this in a later project)
 
-3. **Process four request types:**
+3. **Process three request types:**
    - GetRequest: Return the current value for requested OID(s)
    - SetRequest: Update values for writable OIDs, return error for read-only OIDs
-   - GetBulkRequest: Return multiple sequential OIDs starting from a given OID
    - Maintain proper error codes in responses
 
 4. **Implement proper message framing** - Use the msg_length field to determine message boundaries
@@ -521,14 +721,16 @@ The manager must:
 3. **Display results in a readable format**
    - Show OID and value for get operations
    - Confirm successful sets or display error messages
-   - List all OID/value pairs for bulk operations
+   - List all OID/value pairs for multiple OID requests
    - Convert value types to human-readable format (e.g., timeticks to hours:minutes:seconds)
 4. **Handle errors gracefully**
    - Connection failures (server not running, network issues)
    - Protocol errors (malformed responses, wrong PDU types)
    - Application errors (non-zero error codes in responses)
 
-# 6. Project Milestones
+---
+
+# 7. Project Milestones
 
 ### Milestone 1: Basic Get Operations (Week 1)
 
@@ -544,17 +746,21 @@ python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0
 # Should return: "Router Model X2000"
 ```
 
-### Milestone 2: Buffering & GetBulk (Week 2)
+### Milestone 2: Multiple OIDs & Error Handling (Week 2)
 
-Add GetBulkRequest support with proper buffering:
-- Handle responses exceeding socket buffer size
-- Implement the buffering algorithm correctly
-- Support requesting 50+ OIDs in a single request
+Add support for multiple OID requests and proper error handling:
+- Handle GetRequest with multiple OIDs in a single request
+- Implement proper buffering for larger responses
+- Return appropriate error codes for non-existent OIDs
+- Handle partial failures (some OIDs exist, others don't)
 
 **Test with:**
 ```bash
-python snmp_manager.py bulk localhost:1161 1.3.6.1.2.1.2.2.1 50
-# Should return multiple interface statistics requiring buffered receive
+python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.1.0 1.3.6.1.2.1.1.3.0 1.3.6.1.2.1.1.5.0
+# Should return multiple values in one response
+
+python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.99.0
+# Should return error: No such OID exists
 ```
 
 ### Milestone 3: Set Operations & State Management (Week 3)
@@ -574,12 +780,20 @@ python snmp_manager.py set localhost:1161 1.3.6.1.2.1.1.3.0 integer 0
 # Should fail - system uptime is read-only
 ```
 
-# 7. Testing Your Implementation
+---
+
+# 8. Testing Your Implementation
 
 ### Running the Test Suite
 
 ```bash
-python test_suite.py
+# Run the complete test suite
+python -m pytest tests/ -v
+
+# Or run with a summary report
+python run_tests.py
+
+# Note: If 'python' doesn't work, use 'python3'
 ```
 
 The test suite will automatically:
@@ -587,7 +801,7 @@ The test suite will automatically:
 2. Run various manager commands
 3. Verify responses match expected values
 4. Test error conditions
-5. Measure performance for bulk operations
+5. Measure performance for multiple OID operations
 
 ### Manual Testing
 
@@ -605,35 +819,300 @@ python snmp_manager.py get localhost:1161 1.3.6.1.2.1.1.3.0
 System uptime: 4523 (45.23 seconds)
 ```
 
-### Debugging Tips
+---
 
-1. **Use Wireshark** - Compare your packets with the provided captures
-2. **Add logging** - Print message bytes before sending/after receiving
-3. **Test incrementally** - Get single OID working before bulk requests
-4. **Check byte order** - Remember to use big-endian (`>I`, `>H`)
-5. **Verify lengths** - Ensure msg_length includes all bytes
+# 9. Debugging Guide
 
-## Common Pitfalls and Solutions
+## Essential Debugging Tools
 
-### Pitfall 1: Incomplete Message Reception
-**Problem:** Assuming `recv()` returns complete messages  
-**Solution:** Always use msg_length field and buffer until complete
+### 1. Hex Viewer for Bytes
+When working with binary protocols, you MUST see your bytes in hex format:
 
-### Pitfall 2: Byte Order Issues
-**Problem:** Using little-endian instead of network byte order  
-**Solution:** Always use `!` prefix in struct format strings
+```python
+def debug_bytes(label, data):
+    """Helper function to print bytes in readable format"""
+    print(f"{label}:")
+    print(f"  Raw bytes ({len(data)} bytes): {data}")
+    print(f"  Hex: {data.hex()}")
+    print(f"  Hex spaced: {' '.join(f'{b:02x}' for b in data)}")
+    
+# Usage example:
+message = struct.pack('!IIB', 22, 1234, 0xA0)
+debug_bytes("GetRequest header", message)
+# Output:
+# GetRequest header:
+#   Raw bytes (9 bytes): b'\x00\x00\x00\x16\x00\x00\x04\xd2\xa0'
+#   Hex: 00000016000004d2a0
+#   Hex spaced: 00 00 00 16 00 00 04 d2 a0
+```
 
-### Pitfall 3: String Encoding
-**Problem:** Forgetting to encode/decode strings  
-**Solution:** Use `.encode('utf-8')` and `.decode('utf-8')` consistently
+### 2. Message Structure Analyzer
+Add this to your `snmp_protocol.py` for debugging:
 
-### Pitfall 4: Socket Reuse
-**Problem:** "Address already in use" errors  
-**Solution:** Set `SO_REUSEADDR` option on server socket
+```python
+def analyze_message(data: bytes):
+    """Analyze and print SNMP message structure"""
+    if len(data) < 9:
+        print(f"ERROR: Message too short ({len(data)} bytes, need at least 9)")
+        return
+    
+    # Parse header
+    total_size = struct.unpack('!I', data[0:4])[0]
+    request_id = struct.unpack('!I', data[4:8])[0]
+    pdu_type = struct.unpack('!B', data[8:9])[0]
+    
+    print("="*60)
+    print("SNMP Message Analysis")
+    print("="*60)
+    print(f"Total Size: {total_size} bytes (0x{total_size:08x})")
+    print(f"Request ID: {request_id} (0x{request_id:08x})")
+    print(f"PDU Type: 0x{pdu_type:02x} ", end="")
+    
+    # Decode PDU type
+    pdu_names = {0xA0: "GET_REQUEST", 0xA1: "GET_RESPONSE", 
+                 0xA3: "SET_REQUEST"}
+    print(f"({pdu_names.get(pdu_type, 'UNKNOWN')})")
+```
 
-### Pitfall 5: Message Framing
-**Problem:** Messages bleeding into each other  
-**Solution:** Always include and check msg_length field
+## Common Errors and Solutions
+
+### 1. Byte Order Issues
+
+**Symptom**: Values are wrong by huge amounts (e.g., expecting 22, getting 369098752)
+
+```python
+# DEBUGGING: Check your byte order
+value = 22
+little_endian = struct.pack('<I', value)  # b'\x16\x00\x00\x00'
+big_endian = struct.pack('!I', value)     # b'\x00\x00\x00\x16'
+
+print(f"Value: {value}")
+print(f"Little-endian: {little_endian.hex()} -> {struct.unpack('<I', little_endian)[0]}")
+print(f"Big-endian: {big_endian.hex()} -> {struct.unpack('!I', big_endian)[0]}")
+print(f"Wrong order: {big_endian.hex()} -> {struct.unpack('<I', big_endian)[0]}")  # 369098752!
+```
+
+**Solution**: ALWAYS use `!` prefix for network protocols:
+```python
+# ALWAYS use these for SNMP:
+struct.pack('!I', value)    # 4-byte unsigned int
+struct.pack('!H', value)    # 2-byte unsigned short
+struct.pack('!B', value)    # 1-byte unsigned
+```
+
+### 2. Message Size Calculation Errors
+
+**Symptom**: "Message size mismatch" or incomplete messages
+
+```python
+# WRONG - Common mistakes:
+def pack(self):
+    payload = self._build_payload()
+    # Forgot to include header in size!
+    total_size = len(payload)  # WRONG!
+    
+# CORRECT - Include ALL bytes:
+def pack(self):
+    payload = self._build_payload()
+    # 4 (size) + 4 (request_id) + 1 (pdu_type) + payload
+    total_size = 9 + len(payload)
+    
+    # Build message
+    message = struct.pack('!I', total_size)
+    message += struct.pack('!I', self.request_id)
+    message += struct.pack('!B', self.pdu_type)
+    message += payload
+    
+    # VERIFY the size is correct!
+    assert len(message) == total_size, f"Size mismatch: declared {total_size}, actual {len(message)}"
+    
+    return message
+```
+
+### 3. String Encoding Issues
+
+**Symptom**: `TypeError: a bytes-like object is required, not 'str'`
+
+```python
+# WRONG - Mixing strings and bytes
+oid_string = "1.3.6.1.2.1.1.5.0"
+message = oid_string  # This is a string, not bytes!
+
+# CORRECT - Encode strings to bytes
+oid_string = "1.3.6.1.2.1.1.5.0"
+oid_bytes = encode_oid(oid_string)  # Convert to bytes
+
+# For regular strings:
+text = "router-main"
+text_bytes = text.encode('utf-8')  # Convert to bytes
+```
+
+### 4. Buffering Problems
+
+**Symptom**: Large messages arrive incomplete or corrupted
+
+```python
+# WRONG - Assumes recv() returns complete message
+def receive_message(sock):
+    data = sock.recv(4096)  # Might be incomplete!
+    return data
+
+# CORRECT - Buffer until complete
+def receive_complete_message(sock):
+    # First, get the message size (4 bytes)
+    received = b''
+    while len(received) < 4:
+        chunk = sock.recv(4 - len(received))
+        if not chunk:
+            raise ConnectionError("Connection closed")
+        received += chunk
+    
+    # Decode the size
+    message_size = struct.unpack('!I', received[:4])[0]
+    
+    # Get the rest of the message
+    while len(received) < message_size:
+        remaining = message_size - len(received)
+        chunk = sock.recv(min(remaining, 4096))
+        if not chunk:
+            raise ConnectionError("Connection closed")
+        received += chunk
+    
+    return received
+```
+
+## Understanding Error Messages
+
+### Struct Pack/Unpack Errors
+
+#### Error: `struct.error: unpack requires a buffer of 4 bytes`
+**Cause**: Trying to unpack more bytes than available
+```python
+# WRONG - Not checking if enough data exists
+request_id = struct.unpack('!I', data[4:8])[0]  # Fails if len(data) < 8
+
+# CORRECT - Check length first
+if len(data) >= 8:
+    request_id = struct.unpack('!I', data[4:8])[0]
+else:
+    raise ValueError(f"Message too short: {len(data)} bytes")
+```
+
+#### Error: `struct.error: bad char in struct format`
+**Cause**: Invalid format character
+```python
+# Format character reference:
+# B = unsigned byte (0-255)
+# H = unsigned short (2 bytes, 0-65535)
+# I = unsigned int (4 bytes, 0-4294967295)
+# i = signed int (4 bytes, -2147483648 to 2147483647)
+```
+
+### Socket Errors
+
+#### Error: `[Errno 98] Address already in use`
+**Cause**: Previous server still holding the port
+```python
+# SOLUTION: Add SO_REUSEADDR before binding
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Add this!
+server_socket.bind(('', 1161))
+```
+
+#### Error: `[Errno 111] Connection refused`
+**Cause**: Server not running or wrong port
+```python
+# Debugging steps:
+# 1. Check server is running: ps aux | grep snmp_agent
+# 2. Check port is correct: netstat -an | grep 1161
+# 3. Try connecting manually: telnet localhost 1161
+```
+
+## Protocol Debugging Techniques
+
+### Create Test Messages Manually
+
+```python
+# Create a test GetRequest manually to understand the format
+def create_test_get_request():
+    # Manual message construction
+    request_id = 1234
+    oid = "1.3.6.1.2.1.1.1.0"
+    
+    # Build payload
+    oid_bytes = encode_oid(oid)
+    payload = struct.pack('!B', 1)  # oid_count = 1
+    payload += struct.pack('!B', len(oid_bytes))  # oid_length
+    payload += oid_bytes
+    
+    # Build message
+    total_size = 9 + len(payload)
+    message = struct.pack('!IIB', total_size, request_id, 0xA0)
+    message += payload
+    
+    # Analyze what we built
+    print(f"Built GetRequest:")
+    print(f"  Total size: {total_size}")
+    print(f"  Request ID: {request_id}")
+    print(f"  PDU Type: 0xA0 (GET_REQUEST)")
+    print(f"  OID: {oid}")
+    print(f"  Message hex: {message.hex()}")
+    
+    return message
+```
+
+## Socket Programming Issues
+
+### Server Not Accepting Connections
+
+```python
+# Add debug output to your server
+def start(self):
+    self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    
+    # Debug: Print what we're binding to
+    bind_address = ('', self.port)
+    print(f"DEBUG: Binding to {bind_address}")
+    self.server_socket.bind(bind_address)
+    
+    # Debug: Confirm listening
+    self.server_socket.listen(5)
+    print(f"SNMP Agent listening on port {self.port}...")
+    
+    while True:
+        print("DEBUG: Waiting for connection...")
+        client_socket, client_address = self.server_socket.accept()
+        print(f"DEBUG: Accepted connection from {client_address}")
+        self._handle_client(client_socket, client_address)
+```
+
+### Quick Reference Card
+
+```python
+# Quick debug snippets to copy-paste
+
+# 1. Print hex of any bytes
+print(f"Hex: {data.hex()}")
+
+# 2. Check message size
+print(f"Message size: declared={struct.unpack('!I', data[:4])[0]}, actual={len(data)}")
+
+# 3. Verify byte order
+print(f"As big-endian: {struct.unpack('!I', data[:4])[0]}")
+print(f"As little-endian: {struct.unpack('<I', data[:4])[0]}")
+
+# 4. OID debugging
+oid = "1.3.6.1.2.1.1.1.0"
+encoded = encode_oid(oid)
+decoded = decode_oid(encoded)
+print(f"OID: {oid} -> {encoded.hex()} -> {decoded}")
+assert oid == decoded, "Round-trip failed!"
+```
+
+---
+
+# 10. Grading and Submission
 
 ## Grading Rubric
 
@@ -641,7 +1120,7 @@ System uptime: 4523 (45.23 seconds)
 |-----------|--------|----------|
 | **Protocol Compliance** | 25% | Correct binary format, proper encoding/decoding, follows specification exactly |
 | **Buffering Implementation** | 20% | Correctly handles messages larger than recv buffer, no data loss or corruption |
-| **Get/GetBulk Operations** | 20% | Both operations work correctly, efficient handling of bulk requests |
+| **Get Operations** | 20% | Single and multiple OID queries work correctly, efficient handling |
 | **Set Operations** | 15% | Validates permissions, correct value types, persistent state |
 | **Error Handling** | 10% | Graceful handling of all error conditions, proper error codes |
 | **Code Quality** | 10% | Clean, well-documented code following Python conventions |
@@ -652,11 +1131,14 @@ Submit the following files to Gradescope:
 
 1. **snmp_agent.py** - Your complete agent implementation
 2. **snmp_manager.py** - Your complete manager implementation
-3. **protocol_notes.txt** - Brief documentation of any design decisions or deviations from the specification
+3. **snmp_protocol.py** - Your protocol encoding/decoding implementation
+4. **protocol_notes.txt** - Brief documentation of any design decisions or deviations from the specification
 
-Do not modify or submit the provided files (mib_database.py, snmp_types.py, etc.).
+Do not modify or submit the provided files (mib_database.py, etc.).
 
-## Additional Resources
+---
+
+# 11. Additional Resources
 
 - **RFC 1157** - Original SNMP specification (for reference only)
 - **Python struct documentation** - Essential for binary protocol implementation

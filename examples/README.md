@@ -85,7 +85,7 @@ This will recreate all example files with fresh data.
 
 ## Tips
 
-1. **Start Small**: Begin with the single OID examples before moving to multiple OIDs or bulk requests
+1. **Start Small**: Begin with the single OID examples before moving to multiple OIDs
 2. **Check Byte Order**: Many issues come from incorrect byte ordering - the hex dumps help debug this
 3. **Use the JSON Files**: Write automated tests using the JSON files for faster development
 4. **Compare Hex Values**: When debugging, convert your bytes to hex and compare with the expected values character by character

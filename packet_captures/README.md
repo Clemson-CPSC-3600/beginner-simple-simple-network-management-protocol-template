@@ -45,17 +45,6 @@ SetRequest to change system name.
 - OID: 1.3.6.1.2.1.1.5.0
 - Value: "new-router-name" (STRING)
 
-### get_bulk_request.bin
-GetBulkRequest for interface statistics.
-- Request ID: 3001
-- Start OID: 1.3.6.1.2.1.2.2.1.10
-- Max repetitions: 50
-
-### get_bulk_response_large.bin
-Large GetBulkResponse with 50 OIDs.
-- Tests message buffering (>4KB)
-- Contains interface counter values
-
 ## How to Use These Files
 
 ### Reading in Python:
